@@ -38,13 +38,13 @@ def callback_query(call):
     global logs1
 
     try:
-        logs1 = pd.read_csv('C:/Users/50AdmNsk/PycharmProjects/pythonProject/1.csv')
+        logs1 = pd.read_csv('C:/Users/50AdmNsk/PycharmProjects/pythonProject/Statistic.csv')
         del (logs1['Unnamed: 0'])
         time1 = str(datetime.datetime.now().time())
         dat1 = str(datetime.datetime.now().date())
         logs1 = logs1.concat({'date': dat1, 'time': time1, 'person_id': call.message.chat.id, 'branch_id': req[0]},
                              ignore_index=True)
-        path2 = Path("C:/Users/50AdmNsk/PycharmProjects/pythonProject/1.csv")
+        path2 = Path("C:/Users/50AdmNsk/PycharmProjects/pythonProject/Statistic.csv")
         logs1.to_csv(path2)
     except:
         pass
