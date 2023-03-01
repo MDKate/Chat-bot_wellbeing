@@ -15,8 +15,7 @@ import os
 from emoji import emojize
 
 # Подключаемся к боту
-bot = telebot.TeleBot('')
-
+bot = telebot.TeleBot(open(os.path.abspath('token.txt')).read())
 
 page = 1
 count = 10
@@ -281,7 +280,8 @@ def callback_query(call):
         #                                     callback_data='type3' + str(i / 2)))  # Создаем соответствующую кнопку
         bot.send_message(call.message.chat.id, emoji.emojize(
             "Идет загрузка. Пожалуйста, подождите!"), reply_markup=markup)
-        bot.send_document(call.message.chat.id, os.path.abspath("/Клиники.xlsx"))
+        f = open(os.path.abspath("Клиники.xlsx"), "rb")
+        bot.send_document(call.message.chat.id, f)
         markup = InlineKeyboardMarkup()  # Определяем кнопку
         markup.add(InlineKeyboardButton(text=f'Начнем', callback_data=f'start'))
         bot.send_message(call.message.chat.id, emoji.emojize(
