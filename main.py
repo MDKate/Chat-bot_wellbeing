@@ -38,20 +38,20 @@ def callback_query(call):
     global logs1
 
     try:
-        logs1 = pd.read_csv('C:/Users/50AdmNsk/Downloads/1.csv')
+        logs1 = pd.read_csv('C:/Users/50AdmNsk/PycharmProjects/pythonProject/1.csv')
         del (logs1['Unnamed: 0'])
         time1 = str(datetime.datetime.now().time())
         dat1 = str(datetime.datetime.now().date())
         logs1 = logs1.concat({'date': dat1, 'time': time1, 'person_id': call.message.chat.id, 'branch_id': req[0]},
                              ignore_index=True)
-        path2 = Path("C:/Users/50AdmNsk/Downloads/1.csv")
+        path2 = Path("C:/Users/50AdmNsk/PycharmProjects/pythonProject/1.csv")
         logs1.to_csv(path2)
     except:
         pass
 
     # Скачиваем таблицу состояний
     global tree
-    path1 = Path("C:/Users/50AdmNsk/Downloads/tree.xlsx")
+    path1 = Path("C:/Users/50AdmNsk/PycharmProjects/pythonProject/tree.xlsx")
     tree = pd.read_excel(path1)
     del (tree['Unnamed: 0'])
 
@@ -278,7 +278,7 @@ def callback_query(call):
         #                                     callback_data='type3' + str(i / 2)))  # Создаем соответствующую кнопку
         bot.send_message(call.message.chat.id, emoji.emojize(
             "Идет загрузка. Пожалуйста, подождите!"), reply_markup=markup)
-        bot.send_document(call.message.chat.id, open(r"C:/Users/50AdmNsk/Downloads/Клиники.xlsx", 'rb'))
+        bot.send_document(call.message.chat.id, open(r"C:/Users/50AdmNsk/PycharmProjects/pythonProject/Клиники.xlsx", 'rb'))
         markup = InlineKeyboardMarkup()  # Определяем кнопку
         markup.add(InlineKeyboardButton(text=f'Начнем', callback_data=f'start'))
         bot.send_message(call.message.chat.id, emoji.emojize(
