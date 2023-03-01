@@ -1,3 +1,5 @@
+#!/srv/blago/env/bin/python3
+
 import telebot
 import telegram
 from telebot import types
