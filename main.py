@@ -1,5 +1,6 @@
 #!/srv/blago/env/bin/python3
 
+
 import telebot
 import telegram
 from telebot import types
@@ -26,6 +27,7 @@ count = 10
 def callback_query(call):
     req = call.data.split('_')
     global count
+    global city
     global page
     global ChoosingTopicsResult
     global firstResult
@@ -33,11 +35,16 @@ def callback_query(call):
     global slindingResult
     global nextPage
     global nextPage1
+    global nextPageDS
     global SecondResult
+    global SlidingLevelTupe4Result
     global endSecond
     global slindingType5Result
     global s
     global logs1
+    global cep
+    global typGen
+    global cepType
 
     try:
         logs1 = pd.read_csv(os.path.abspath('Statistic.csv'))
@@ -271,48 +278,130 @@ def callback_query(call):
     # --------------------------------------------------------------Ветка ДМС----------------------------------------------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     elif req[0] == '4':  # Если метка 4
+        print("")
         ChoosingTopicsResult = ChoosingTopics(tree)
         firstResult, endSlinding = FirstLevel(tree, ChoosingTopicsResult[int(req[0]) * 2],
                                               ChoosingTopicsResult)  # Вызываем функцию
         markup = InlineKeyboardMarkup()  # Определяем кнопку
-        # for i in range(0, len(firstResult), 2):  # Бежим по списку, вовзвращенному функцией
-        #     markup.add(InlineKeyboardButton(text=firstResult[i],
-        #                                     callback_data='type3' + str(i / 2)))  # Создаем соответствующую кнопку
-        bot.send_message(call.message.chat.id, emoji.emojize(
-            "Идет загрузка. Пожалуйста, подождите!"), reply_markup=markup)
-        f = open(os.path.abspath("Клиники.xlsx"), "rb")
-        bot.send_document(call.message.chat.id, f)
-        markup = InlineKeyboardMarkup()  # Определяем кнопку
-        markup.add(InlineKeyboardButton(text=f'Начнем', callback_data=f'start'))
-        bot.send_message(call.message.chat.id, emoji.emojize(
-            "Добрый день!:hand_with_fingers_splayed: Вы хотите узнать что-то про ЗОЖ?:red_question_mark: Тогда, нажмите кнопку: :play_button:"),
-                         reply_markup=markup)
+        for i in range(0, len(firstResult), 2):  # Бежим по списку, вовзвращенному функцией
+            markup.add(InlineKeyboardButton(text=firstResult[i],
+                                            callback_data='type3' + str(i / 2)))  # Создаем соответствующую кнопку
+        markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                        callback_data='start'))  # Создаем кнопку возврата на главную страницу
+        bot.edit_message_text(emoji.emojize(f"Какое ДМС вас интересует? :man_health_worker:"), reply_markup=markup,
+                              chat_id=call.message.chat.id,
+                              message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+        nextPage = 'type3' + str(i / 2)  # Запоминаем нажатую кнопку
 
-
-
-
-
-
-        # markup.add(InlineKeyboardButton(text='Вернуться на главную',
-        #                                 callback_data='start'))  # Создаем кнопку возврата на главную страницу
-        # bot.edit_message_text(emoji.emojize(f"Какое ДМС вас интересует? :man_health_worker:"), reply_markup=markup,
-        #                       chat_id=call.message.chat.id,
-        #                       message_id=call.message.message_id)  # Выводим сопутствующее сообщение
-        # nextPage = 'type3' + str(i / 2)  # Запоминаем нажатую кнопку
-    # elif 'type3' in req[0]:  # Если метка содержит type3
-    #     bot.send_document(call.message.chat.id, open(r"C:/Users/50AdmNsk/Downloads/Клиники.xlsx", 'rb'))
-
+    elif 'type3' in req[0]:  # Если метка содержит type3
+        cep = req[0]
+        # bot.send_document(call.message.chat.id, open(r"C:/Users/50AdmNsk/Downloads/Клиники.xlsx", 'rb'))
+        #
         # slindingResult = SlidingLevel(tree, firstResult, firstResult[int(float(nextPage[5:])) * 2],
         #                               endSlinding)  # Вызываем функцию
+        # print(slindingResult)
         # markup = InlineKeyboardMarkup()  # Определяем кнопку
-        # markup.add(
-        #     InlineKeyboardButton(text=slindingResult[0], url='https://vk.com/'))  # Создаем соответствующую кнопку
+        #
         # markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[8]}"',
         #                                 callback_data='4'))  # Создаем кнопку возврата к теме
         # markup.add(InlineKeyboardButton(text='Вернуться на главную',
         #                                 callback_data='start'))  # Создаем кнопку возврата на главную страницу
         # bot.edit_message_text(f"Информация по ДМС:", reply_markup=markup, chat_id=call.message.chat.id,
         #                       message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+        if 'ChoosingTopicsResult' in globals():
+            if page == 0:
+                SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(req[0][5:]) * 2)],
+                                                      endSlinding)  # Вызываем функцию
+                nextPage1 = req[0]  # Запоминаем нажатую кнопку
+            else:
+                SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(req[0][5:]) * 2)],
+                                                      endSlinding)  # Вызываем функцию от предыдущей кнопки
+
+            markup = InlineKeyboardMarkup()  # Определяем кнопку
+            for i in range(0, len(SecondResult), 2):  # Бежим по списку, вовзвращенному функцией
+                markup.add(InlineKeyboardButton(text=SecondResult[i],
+                                                callback_data='typDS3' + str(i / 2)))  # Создаем соответствующую кнопку
+            markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[8]}"',
+                                            callback_data='4'))  # Создаем кнопку возврата к теме
+            markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                            callback_data='start'))  # Создаем кнопку возврата на главную страницу
+            bot.edit_message_text(f"Что вас интересует?", reply_markup=markup,
+                                  chat_id=call.message.chat.id,
+                                  message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+            page += 1
+            nextPageDS = 'typeDS' + str(i / 2)  # Запоминаем нажатую кнопку
+
+            # print(nextPageDS)
+
+
+    elif 'typDS3' in req[0] and cep == 'type30.0':
+        # print(req[0])
+        if 'ChoosingTopicsResult' in globals():
+            cepType = req[0]
+            # print(SecondResult)
+            # slindingResult = SlidingLevel(tree, SecondResult, SecondResult[int(float(req[0][6:])) * 2],
+            #                               endSecond)
+            SlidingLevelTupe4Result = SlidingLevelTupe4(tree, SecondResult, SecondResult[int(float(req[0][6:])) * 2], endSecond)
+
+            markup = InlineKeyboardMarkup()  # Определяем кнопку
+            for i in range(0, len(SlidingLevelTupe4Result), 2):  # Бежим по списку, вовзвращенному функцией
+                markup.add(InlineKeyboardButton(text=SlidingLevelTupe4Result[i],
+                                                callback_data='typDScity' + str(i / 2)))  # Создаем соответствующую кнопку
+            markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                            callback_data='start'))  # Создаем кнопку возврата на главную страницу
+            bot.edit_message_text(f'Выберите ваш город: ', parse_mode='Markdown', reply_markup=markup,
+                                   chat_id=call.message.chat.id,
+                                  message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+            typGen = 'typGen' + str(i / 2)  # Запоминаем нажатую кнопку
+            # print(typGen)
+            # print(SlidingLevelTupe4Result)
+    elif 'typDScity' in req[0]:
+
+        if 'ChoosingTopicsResult' in globals():
+            listTable = pd.read_excel(os.path.abspath("ДМС/" + SlidingLevelTupe4Result[int(float(req[0][9:])*2)] + '/' + SecondResult[int(float(cepType[6:])*2)]) +".xlsx")
+            # del (listTable['Unnamed: 0'])
+            city = req[0]
+            print(len(listTable))
+            markup = InlineKeyboardMarkup()
+            for i in range(0, len(listTable)):
+                # print(listTable['Наименование медицинской организации'][i] + " " + listTable['Адрес медицинской организации'][i] + " "
+                #       + listTable['Телефон'][i] + " " + listTable['Сайт'][i] + " ")
+                markup.add(InlineKeyboardButton(text=listTable['Наименование медицинской организации'][i] + " " + listTable['Адрес медицинской организации'][i] + " "
+                      + listTable['Телефон'][i] + " ", url=listTable['Сайт'][i]))
+
+        markup.add(InlineKeyboardButton(text=f'Полный список клиник', parse_mode=ParseMode.HTML,
+                                        callback_data=f'clinic'))  # Создаем кнопку возврата на главную страницу
+        markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                        callback_data='start'))  # Создаем кнопку возврата на главную страницу
+        bot.edit_message_text(f"Клиники:", reply_markup=markup,
+                              chat_id=call.message.chat.id,
+                              message_id=call.message.message_id)
+    elif req[0] == 'clinic':
+        pth = os.path.abspath("ДМС/" + SlidingLevelTupe4Result[int(float(city[9:])*2)] + '/' + "Общий.xlsx")
+        bot.send_document(call.message.chat.id, open((pth), 'rb'))
+
+    elif 'typDS3' in req[0] and cep == 'type31.0':
+        # print(req[0])
+        if 'ChoosingTopicsResult' in globals():
+            cepType = req[0]
+            listTable = pd.read_excel(os.path.abspath("ДМС/" + SecondResult[int(float(req[0][6:])) * 2] + "/Стоматология.xlsx"))
+            markup = InlineKeyboardMarkup()
+            for i in range(0, len(listTable)):
+                markup.add(InlineKeyboardButton(text=listTable['Наименование медицинской организации'][i] + " " +
+                                                     listTable['Адрес медицинской организации'][i] + " "
+                                                     + listTable['Телефон'][i] + " ", url=listTable['Сайт'][i]))
+            markup.add(InlineKeyboardButton(text=f'Полный список клиник', parse_mode=markup,
+                                            callback_data='obs'))  # Создаем кнопку возврата на главную страницу
+
+            markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                            callback_data='start'))  # Создаем кнопку возврата на главную страницу
+            bot.edit_message_text(f'Клиники: ', parse_mode='Markdown', reply_markup=markup,
+                                   chat_id=call.message.chat.id,
+                                  message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+    elif req[0] == 'obs':
+        f = open("ДМС/" + SecondResult[int(float(cepType[6:])) * 2] + "/Общий.xlsx", "rb")
+        bot.send_document(call.message.chat.id, f)
+
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     # --------------------------------------------------------------Ветка ГТО----------------------------------------------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -472,113 +561,115 @@ def callback_query(call):
     # --------------------------------------------------------------Ветка пропитание----------------------------------------------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     elif req[0] == '1':  # Если метка 1
-        ChoosingTopicsResult = ChoosingTopics(tree)
-        page = -1
-        firstResult, endSlinding = FirstLevel(tree, ChoosingTopicsResult[int(req[0]) * 2],
-                                              ChoosingTopicsResult)  # Вызываем функцию
+        # ChoosingTopicsResult = ChoosingTopics(tree)
+        # page = -1
+        # firstResult, endSlinding = FirstLevel(tree, ChoosingTopicsResult[int(req[0]) * 2],
+        #                                       ChoosingTopicsResult)  # Вызываем функцию
         markup = InlineKeyboardMarkup()  # Определяем кнопку
-        for i in range(0, len(firstResult), 2):  # Бежим по списку, вовзвращенному функцией
-            markup.add(InlineKeyboardButton(text=firstResult[i],
-                                            callback_data='name2' + str(i / 2)))  # Создаем соответствующую кнопку
+        # for i in range(0, len(firstResult), 2):  # Бежим по списку, вовзвращенному функцией
+        #     markup.add(InlineKeyboardButton(text=firstResult[i],
+        #                                     callback_data='name2' + str(i / 2)))  # Создаем соответствующую кнопку
+        markup.add(InlineKeyboardButton(text="Ссылка", url="https://здоровое-питание.рф/"))
         markup.add(InlineKeyboardButton(text='Вернуться на главную',
                                         callback_data='start'))  # Создаем кнопку возврата на главную страницу
-        bot.edit_message_text(emoji.emojize(f"Какой рецеп вы хотите получить? :face_savoring_food:"),
+        # bot.edit_message_text(emoji.emojize(f"Какой рецеп вы хотите получить? :face_savoring_food:"),
+        bot.edit_message_text(emoji.emojize(f"Здесь вы можете подробнее узнать про правильное питание! :face_savoring_food:"),
                               reply_markup=markup, chat_id=call.message.chat.id,
                               message_id=call.message.message_id)  # Выводим сопутствующее сообщение
 
-    elif 'name20.0' == req[0]:  # Если метка содержит name20.0
-        SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(req[0][5:])) * 2],
-                                              endSlinding)  # Вызываем функцию
-        markup = InlineKeyboardMarkup()  # Определяем кнопку
-        markup.add(InlineKeyboardButton(text=SecondResult[0], callback_data=f' '))  # Создаем соответствующую кнопку
-        markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[2]}"',
-                                        callback_data='1'))  # Создаем кнопку возврата к теме
-        markup.add(InlineKeyboardButton(text='Вернуться на главную',
-                                        callback_data='start'))  # Создаем кнопку возврата на главную страницу
-        bot.edit_message_text(f"Это помощник. Он выдает один произвольный рецепт. Ваш рецепт:", reply_markup=markup,
-                              chat_id=call.message.chat.id,
-                              message_id=call.message.message_id)  # Выводим сопутствующее сообщение
-    elif 'name20.0' != req[0] and 'name2' in req[0]:  # Если метка не содержит name20.0 и содержит name2
-        if page == -1:
-            SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(req[0][5:])) * 2],
-                                                  endSlinding)  # Вызываем функцию
-        else:
-            SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(nextPage1[5:]) * 2)],
-                                                  endSlinding)  # Вызываем функцию по предыдущей кнопке
-        markup = InlineKeyboardMarkup()  # Определяем кнопку
-        for i in range(0, len(SecondResult), 2):  # Бежим по списку, вовзвращенному функцией
-            markup.add(InlineKeyboardButton(text=SecondResult[i],
-                                            callback_data='type5' + str(i / 2)))  # Создаем соответствующую кнопку
-        markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[2]}"',
-                                        callback_data='1'))  # Создаем кнопку возврата к теме
-        markup.add(InlineKeyboardButton(text='Вернуться на главную',
-                                        callback_data='start'))  # Создаем кнопку возврата на главную страницу
-        bot.edit_message_text(f"Выберите калорийность:", reply_markup=markup, chat_id=call.message.chat.id,
-                              message_id=call.message.message_id)  # Выводим сопутствующее сообщение
-        nextPage1 = req[0]  # Запоминаем нажатую кнопку
-        page = 0
-        s = 0
-    elif 'type5' in req[0]:  # Если метка содержит type5
-        if 'ChoosingTopicsResult' in globals():
-            if s == 1:  # Определяем направление движения
-                page = page + 2
-            nextPage = req[0]  # Запоминаем нажатую кнопку
-            slindingType5Result = SlidingLevelTupe5(tree, SecondResult, SecondResult[int(float(req[0][5:])) * 2],
-                                                    endSecond)  # Вызываем функцию
-            count = len(slindingType5Result)
-            s = 0
-            if page < count:  # Если движемся вперед
-                markup = InlineKeyboardMarkup()  # Определяем кнопку
-                markup.add(InlineKeyboardButton(text=slindingType5Result[page],
-                                                callback_data=req[0]))  # Создаем соответствующую кнопку
-                markup.add(InlineKeyboardButton(text=emoji.emojize(f':left_arrow: Назад'), callback_data=f'backpage2'),
-                           InlineKeyboardButton(text=f'{int(page / 2) + 1}/{int(count / 2)}', callback_data=f' '),
-                           # Создаем кнопку назад
-                           InlineKeyboardButton(text=emoji.emojize(f'Вперёд :right_arrow:'),
-                                                callback_data=req[0]))  # Создаем кнопку вперед
-                markup.add(InlineKeyboardButton(text=f'Вернуться к "Калорийность"',
-                                                callback_data=nextPage1))  # Создаем кнопку возврата к теме
-                markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[2]}"',
-                                                callback_data='1'))  # Создаем кнопку возврата к теме
-                markup.add(InlineKeyboardButton(text='Вернуться на главную',
-                                                callback_data='start'))  # Создаем кнопку возврата на главную страницу
-                bot.edit_message_text(f'Рецепты: ', reply_markup=markup, chat_id=call.message.chat.id,
-                                      message_id=call.message.message_id)  # Выводим сопутствующее сообщение
-                page = page + 2
-        else:
-            markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton(text=emoji.emojize('Начать :detective:'), callback_data='start'))
-            bot.edit_message_text(emoji.emojize(f'Я немного подучился :desktop_computer: и готов помогать вам дальше! :man_running: Давайте снова начнем общаться! :e-mail:'),
-                                  reply_markup=markup, chat_id=call.message.chat.id, message_id=call.message.message_id)  # Выводим сопутствующее сообщение
-    elif req[0] == 'backpage2':  # Если метка  backpage2
-        if 'ChoosingTopicsResult' in globals():
-            if s == 0:  # Определяем направление движения
-                page = page - 2
-            s = 1
-            if page > 1:  # Если движемся назад
-                page = page - 2
-                markup = InlineKeyboardMarkup()  # Определяем кнопку
-                markup.add(InlineKeyboardButton(text=slindingType5Result[page],
-                                                callback_data=f' '))  # Создаем соответствующую кнопку
-                markup.add(InlineKeyboardButton(text=emoji.emojize(f':left_arrow: Назад'), callback_data=f'backpage2'),
-                           InlineKeyboardButton(text=f'{int(page / 2) + 1}/{int(count / 2)}', callback_data=f' '),
-                           # Создаем кнопку назад
-                           InlineKeyboardButton(text=emoji.emojize(f'Вперёд :right_arrow:'),
-                                                callback_data=nextPage))  # Создаем кнопку вперед
-                markup.add(InlineKeyboardButton(text=f'Вернуться к "Калорийность"',
-                                                callback_data=nextPage1))  # Создаем кнопку возврата к теме
-                markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[2]}"',
-                                                callback_data='1'))  # Создаем кнопку возврата к теме
-                markup.add(InlineKeyboardButton(text='Вернуться на главную',
-                                                callback_data='start'))  # Создаем кнопку возврата на главную страницу
-                bot.edit_message_text(f'Рецепты:', reply_markup=markup, chat_id=call.message.chat.id,
-                                      message_id=call.message.message_id)  # Выводим сопутствующее сообщение
-        else:
-            markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton(text=emoji.emojize('Начать :detective:'), callback_data='start'))
-            bot.edit_message_text(emoji.emojize(f'Я немного подучился :desktop_computer: и готов помогать вам дальше! :man_running: Давайте снова начнем общаться! :e-mail:'),
-                                  reply_markup=markup, chat_id=call.message.chat.id, message_id=call.message.message_id)  # Выводим сопутствующее сообщение
-
+    # elif 'name20.0' == req[0]:  # Если метка содержит name20.0
+    #     SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(req[0][5:])) * 2],
+    #                                           endSlinding)  # Вызываем функцию
+    #     markup = InlineKeyboardMarkup()  # Определяем кнопку
+    #     markup.add(InlineKeyboardButton(text=SecondResult[0], callback_data=f' '))  # Создаем соответствующую кнопку
+    #     markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[2]}"',
+    #                                     callback_data='1'))  # Создаем кнопку возврата к теме
+    #     markup.add(InlineKeyboardButton(text='Вернуться на главную',
+    #                                     callback_data='start'))  # Создаем кнопку возврата на главную страницу
+    #     bot.edit_message_text(f"Это помощник. Он выдает один произвольный рецепт. Ваш рецепт:", reply_markup=markup,
+    #                           chat_id=call.message.chat.id,
+    #                           message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+    # elif 'name20.0' != req[0] and 'name2' in req[0]:  # Если метка не содержит name20.0 и содержит name2
+    #     if page == -1:
+    #         SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(req[0][5:])) * 2],
+    #                                               endSlinding)  # Вызываем функцию
+    #     else:
+    #         SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(nextPage1[5:]) * 2)],
+    #                                               endSlinding)  # Вызываем функцию по предыдущей кнопке
+    #     markup = InlineKeyboardMarkup()  # Определяем кнопку
+    #     for i in range(0, len(SecondResult), 2):  # Бежим по списку, вовзвращенному функцией
+    #         markup.add(InlineKeyboardButton(text=SecondResult[i],
+    #                                         callback_data='type5' + str(i / 2)))  # Создаем соответствующую кнопку
+    #     markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[2]}"',
+    #                                     callback_data='1'))  # Создаем кнопку возврата к теме
+    #     markup.add(InlineKeyboardButton(text='Вернуться на главную',
+    #                                     callback_data='start'))  # Создаем кнопку возврата на главную страницу
+    #     bot.edit_message_text(f"Выберите калорийность:", reply_markup=markup, chat_id=call.message.chat.id,
+    #                           message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+    #     nextPage1 = req[0]  # Запоминаем нажатую кнопку
+    #     page = 0
+    #     s = 0
+    # elif 'type5' in req[0]:  # Если метка содержит type5
+    #     if 'ChoosingTopicsResult' in globals():
+    #         if s == 1:  # Определяем направление движения
+    #             page = page + 2
+    #         nextPage = req[0]  # Запоминаем нажатую кнопку
+    #         slindingType5Result = SlidingLevelTupe5(tree, SecondResult, SecondResult[int(float(req[0][5:])) * 2],
+    #                                                 endSecond)  # Вызываем функцию
+    #         count = len(slindingType5Result)
+    #         s = 0
+    #         if page < count:  # Если движемся вперед
+    #             markup = InlineKeyboardMarkup()  # Определяем кнопку
+    #             markup.add(InlineKeyboardButton(text=slindingType5Result[page],
+    #                                             callback_data=req[0]))  # Создаем соответствующую кнопку
+    #             markup.add(InlineKeyboardButton(text=emoji.emojize(f':left_arrow: Назад'), callback_data=f'backpage2'),
+    #                        InlineKeyboardButton(text=f'{int(page / 2) + 1}/{int(count / 2)}', callback_data=f' '),
+    #                        # Создаем кнопку назад
+    #                        InlineKeyboardButton(text=emoji.emojize(f'Вперёд :right_arrow:'),
+    #                                             callback_data=req[0]))  # Создаем кнопку вперед
+    #             markup.add(InlineKeyboardButton(text=f'Вернуться к "Калорийность"',
+    #                                             callback_data=nextPage1))  # Создаем кнопку возврата к теме
+    #             markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[2]}"',
+    #                                             callback_data='1'))  # Создаем кнопку возврата к теме
+    #             markup.add(InlineKeyboardButton(text='Вернуться на главную',
+    #                                             callback_data='start'))  # Создаем кнопку возврата на главную страницу
+    #             bot.edit_message_text(f'Рецепты: ', reply_markup=markup, chat_id=call.message.chat.id,
+    #                                   message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+    #             page = page + 2
+    #     else:
+    #         markup = InlineKeyboardMarkup()
+    #         markup.add(InlineKeyboardButton(text=emoji.emojize('Начать :detective:'), callback_data='start'))
+    #         bot.edit_message_text(emoji.emojize(f'Я немного подучился :desktop_computer: и готов помогать вам дальше! :man_running: Давайте снова начнем общаться! :e-mail:'),
+    #                               reply_markup=markup, chat_id=call.message.chat.id, message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+    # elif req[0] == 'backpage2':  # Если метка  backpage2
+    #     if 'ChoosingTopicsResult' in globals():
+    #         if s == 0:  # Определяем направление движения
+    #             page = page - 2
+    #         s = 1
+    #         if page > 1:  # Если движемся назад
+    #             page = page - 2
+    #             markup = InlineKeyboardMarkup()  # Определяем кнопку
+    #             markup.add(InlineKeyboardButton(text=slindingType5Result[page],
+    #                                             callback_data=f' '))  # Создаем соответствующую кнопку
+    #             markup.add(InlineKeyboardButton(text=emoji.emojize(f':left_arrow: Назад'), callback_data=f'backpage2'),
+    #                        InlineKeyboardButton(text=f'{int(page / 2) + 1}/{int(count / 2)}', callback_data=f' '),
+    #                        # Создаем кнопку назад
+    #                        InlineKeyboardButton(text=emoji.emojize(f'Вперёд :right_arrow:'),
+    #                                             callback_data=nextPage))  # Создаем кнопку вперед
+    #             markup.add(InlineKeyboardButton(text=f'Вернуться к "Калорийность"',
+    #                                             callback_data=nextPage1))  # Создаем кнопку возврата к теме
+    #             markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[2]}"',
+    #                                             callback_data='1'))  # Создаем кнопку возврата к теме
+    #             markup.add(InlineKeyboardButton(text='Вернуться на главную',
+    #                                             callback_data='start'))  # Создаем кнопку возврата на главную страницу
+    #             bot.edit_message_text(f'Рецепты:', reply_markup=markup, chat_id=call.message.chat.id,
+    #                                   message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+    #     else:
+    #         markup = InlineKeyboardMarkup()
+    #         markup.add(InlineKeyboardButton(text=emoji.emojize('Начать :detective:'), callback_data='start'))
+    #         bot.edit_message_text(emoji.emojize(f'Я немного подучился :desktop_computer: и готов помогать вам дальше! :man_running: Давайте снова начнем общаться! :e-mail:'),
+    #                               reply_markup=markup, chat_id=call.message.chat.id, message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+    # # print(req[0])
 
 
 # Обработчик входящих сообщений
@@ -604,7 +695,6 @@ def start(m):
 if __name__ == '__main__':
 
     bot.polling(none_stop=True)
-
 
 
 
