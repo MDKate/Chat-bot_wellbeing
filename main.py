@@ -12,7 +12,10 @@ from pathlib import Path
 from telegram import ParseMode
 import datetime
 import os
-
+from multiprocessing.context import Process
+import threading
+from time import sleep
+import schedule
 from emoji import emojize
 
 # Подключаемся к боту
@@ -21,12 +24,29 @@ bot = telebot.TeleBot(open(os.path.abspath('token.txt')).read())
 page = 1
 count = 10
 
+from concurrent.futures import ThreadPoolExecutor
+import queue
 
+
+
+
+# class ScheduleMessage():
+#     def try_send_schedule():
+#         while True:
+#             schedule.run_pending()
+#             sleep(1)
+#     def start_process():
+#         p1 = Process(target=ScheduleMessage.try_send_schedule, args=())
+#         p1.start()
+
+
+pd.set_option('mode.chained_assignment', None)
 # Определяем отклик
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
     req = call.data.split('_')
     global count
+    global idM
     global city
     global page
     global ChoosingTopicsResult
@@ -46,6 +66,8 @@ def callback_query(call):
     global typGen
     global cepType
 
+
+
     try:
         logs1 = pd.read_csv(os.path.abspath('Statistic.csv'))
         del (logs1['Unnamed: 0'])
@@ -63,6 +85,12 @@ def callback_query(call):
     path1 = os.path.abspath("tree.xlsx")
     tree = pd.read_excel(path1)
     del (tree['Unnamed: 0'])
+
+    global base
+    base = pd.read_excel(os.path.abspath("base.xlsx"))
+    del (base['Unnamed: 0'])
+
+
 
     # Определяем функции состояний
     def ChoosingTopics(tree):
@@ -91,7 +119,9 @@ def callback_query(call):
         return FirstName, end
 
     def SlidingLevel(tree, firstResult, first, endSlinding):
-        start1 = int(np.argwhere(firstResult == first))  # Определяем индекс выбранной кнопки
+        firstResult = pd.Series(firstResult)
+        start1 = (firstResult.loc[lambda x: (x == first)].index)[0]
+        # start1 = int(np.argwhere(firstResult == first))  # Определяем индекс выбранной кнопки
         start = int(firstResult[start1 + 1]) + 1  # Определяем первую строку отсчета для выбранной ветки
         if start1 + 2 == len(firstResult):
             end = endSlinding
@@ -99,7 +129,7 @@ def callback_query(call):
             end = int(firstResult[start1 + 3]) - 1  # Определяем последнюю строку отсчета для выбранной ветки
         SlidingLevelName = np.array(
             [np.array(tree['Name'][start:start + 1])[0], start])  # Записываем первое имя ветки в этой ветке
-        for i in range(start + 1, end + 1):
+        for i in range(start + 1, int(end) + 1):
             if int(tree['ThirdLevel'][i - 1:i]) != int(
                     tree['ThirdLevel'][i:i + 1]):  # Есди это другая ветка внутри ветки
                 SlidingLevelName = np.append(SlidingLevelName, tree['Name'][i:i + 1])  # Дописываем имя новой ветки
@@ -107,7 +137,8 @@ def callback_query(call):
         return SlidingLevelName  # заглушка
 
     def SecondLevel(tree, firstResult, first, endSlinding):
-        start1 = int(np.argwhere(firstResult == first))  # Определяем индекс выбранной кнопки
+        firstResult = pd.Series(firstResult)
+        start1 = (firstResult.loc[lambda x : (x==first)].index)[0] # Определяем индекс выбранной кнопки
         start = int(firstResult[start1 + 1]) + 1  # Определяем первую строку отсчета для выбранной ветки
         if start1 + 2 == len(firstResult):
             end = endSlinding
@@ -124,7 +155,8 @@ def callback_query(call):
         return SecondName, endSecond
 
     def SlidingLevelTupe4(tree, SecondResult, Second, endSecond):
-        start1 = int(np.argwhere(SecondResult == Second))  # Определяем индекс выбранной кнопки
+        SecondResult = pd.Series(SecondResult)
+        start1 = (SecondResult.loc[lambda x: (x == Second)].index)[0]  # Определяем индекс выбранной кнопки
         start = int(SecondResult[start1 + 1]) + 1  # Определяем первую строку отсчета для выбранной ветки
         if start1 + 2 == len(SecondResult):
             end = endSecond
@@ -132,7 +164,8 @@ def callback_query(call):
             end = int(SecondResult[start1 + 3]) - 1  # Определяем последнюю строку отсчета для выбранной ветки
         slidNameType4 = np.array(
             [np.array(tree['Name'][start:start + 1])[0], start])  # Записываем первое имя ветки в этой ветке
-        for i in range(start + 1, end + 1):
+        # print( ' ', start, ' ', end)
+        for i in range(start + 1, int(end) + 1):
             slidNameType4 = np.append(slidNameType4, tree['Name'][i:i + 1])  # Дописываем имя новой ветки
             slidNameType4 = np.append(slidNameType4, i)  # Записываем ссылку на координаты
         return slidNameType4  # заглушка
@@ -218,8 +251,29 @@ def callback_query(call):
                               message_id=call.message.message_id)  # Выводим сопутствующее сообщение
         page = 0
         s = 0
+        # base = pd.read_excel(os.path.abspath("base.xlsx"))
+        # del (base['Unnamed: 0'])
+        idM = (base['id'].loc[lambda x: (x == call.message.chat.id)].index)[0]
+        base['s'][idM] = s
+        base['page'][idM] = page
+        base['nextPage'][idM] = ""
+        base['firstResult'][idM] = firstResult.astype(str)
+        base['endSlinding'][idM] = endSlinding
+        base['slindingResult'][idM] = ""
+        # base.to_excel(os.path.abspath("base.xlsx"))
+        # base = ""
+
     elif 'next-page' in req[0]:  # Если метка содержит next-page
         if 'ChoosingTopicsResult' in globals():
+            # base = pd.read_excel(os.path.abspath("base.xlsx"))
+            # del (base['Unnamed: 0'])
+            idM = (base['id'].loc[lambda x: (x == call.message.chat.id)].index)[0]
+            firstResult = (((base['firstResult'][idM])[1:])[:-1]).split("'")
+            del firstResult[::2]
+            page = int(base['page'][idM])
+            endSlinding = (base['endSlinding'][idM])
+            s = int(base['s'][idM])
+
             if s == 1:  # Определяем направление движения
                 page = page + 2
             nextPage = req[0]  # Запоминаем нажатую кнопку
@@ -245,6 +299,14 @@ def callback_query(call):
                                     message_id=call.message.message_id)  # Выводим сопутствующее сообщение
             # if s==0:
                 page = page + 2
+            # print(call.message.chat.id)
+            # print(page)
+            base['s'][idM] = s
+            base['page'][idM] = page
+            base['slindingResult'][idM] = slindingResult.astype(str)
+            # base.to_excel(os.path.abspath("base.xlsx"))
+            # base = ""
+
         else:
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton(text=emoji.emojize('Начать :detective:'), callback_data='start'))
@@ -252,6 +314,14 @@ def callback_query(call):
                                   reply_markup=markup, chat_id=call.message.chat.id, message_id=call.message.message_id)  # Выводим сопутствующее сообщение
     elif req[0] == 'back-page':  # Если метка содержит back-page
         if 'ChoosingTopicsResult' in globals():
+            # base = pd.read_excel(os.path.abspath("base.xlsx"))
+            # del (base['Unnamed: 0'])
+            idM = (base['id'].loc[lambda x: (x == call.message.chat.id)].index)[0]
+            slindingResult = (((base['slindingResult'][idM])[1:])[:-1]).split("'")
+            del slindingResult[::2]
+            page = int(base['page'][idM])
+            s = int(base['s'][idM])
+
             if s == 0:  # Определяем направление движения
                 page = page - 2
             s = 1
@@ -269,6 +339,11 @@ def callback_query(call):
                                                 callback_data='start'))  # Создаем кнопку возврата на главную страницу
                 bot.edit_message_text(f'Проосмотр видео: {str(slindingResult[page])}',parse_mode=ParseMode.HTML, reply_markup=markup, chat_id=call.message.chat.id,
                                         message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+            base['s'][idM] = s
+            base['page'][idM] = page
+            # base.to_excel(os.path.abspath("base.xlsx"))
+            # base = ""
+
         else:
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton(text=emoji.emojize('Начать :detective:'), callback_data='start'))
@@ -278,7 +353,7 @@ def callback_query(call):
     # --------------------------------------------------------------Ветка ДМС----------------------------------------------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     elif req[0] == '4':  # Если метка 4
-        print("")
+        # print("")
         ChoosingTopicsResult = ChoosingTopics(tree)
         firstResult, endSlinding = FirstLevel(tree, ChoosingTopicsResult[int(req[0]) * 2],
                                               ChoosingTopicsResult)  # Вызываем функцию
@@ -293,8 +368,39 @@ def callback_query(call):
                               message_id=call.message.message_id)  # Выводим сопутствующее сообщение
         nextPage = 'type3' + str(i / 2)  # Запоминаем нажатую кнопку
 
+        # base = pd.read_excel(os.path.abspath("base.xlsx"))
+        # del (base['Unnamed: 0'])
+        # for i in range(0, len(base)):
+        #     if (base['id'][i]) == (np.int64(call.message.chat.id)):
+        i = (base['id'].loc[lambda x : (x==call.message.chat.id)].index)[0]
+        base['firstResult'][i] = firstResult.astype(str)
+                # print(firstResult.astype(str))
+        base['endSlinding'][i] = str(endSlinding)
+        base['secondResult'][i] = ""
+        base['endSecond'][i] = ""
+        base['cepType'][i] = ""
+        base['cep'][i] = ""
+        base['city'][i] = ""
+        base['slindingLevelType4Result'][i] = ""
+        #         base.to_excel(os.path.abspath("base.xlsx"))
+        # base = ""
+
     elif 'type3' in req[0]:  # Если метка содержит type3
+
+        # base = pd.read_excel(os.path.abspath("base.xlsx"))
+        # del (base['Unnamed: 0'])
+        # print((base['id'].loc[lambda x : (x==call.message.chat.id)].index)[0])
+        # for i in range(0, len(base)):
+        #     print(type(str(base['id'][i])))
+        #     print(type(str(call.message.chat.id)))
+        #     if str(base['id'][i]) == (str(call.message.chat.id)):
+        idM = (base['id'].loc[lambda x: (x == call.message.chat.id)].index)[0]
+        firstResult = (((base['firstResult'][idM])[1:])[:-1]).split("'")
+        del firstResult[::2]
+
+        endSlinding = int(base['endSlinding'][idM])
         cep = req[0]
+
         # bot.send_document(call.message.chat.id, open(r"C:/Users/50AdmNsk/Downloads/Клиники.xlsx", 'rb'))
         #
         # slindingResult = SlidingLevel(tree, firstResult, firstResult[int(float(nextPage[5:])) * 2],
@@ -310,17 +416,23 @@ def callback_query(call):
         #                       message_id=call.message.message_id)  # Выводим сопутствующее сообщение
         if 'ChoosingTopicsResult' in globals():
             if page == 0:
-                SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(req[0][5:]) * 2)],
+                SecondResult, endSecond = SecondLevel(tree, firstResult,
+                                                      firstResult[int(float(req[0][5:]) * 2)],
                                                       endSlinding)  # Вызываем функцию
                 nextPage1 = req[0]  # Запоминаем нажатую кнопку
             else:
-                SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(req[0][5:]) * 2)],
+                SecondResult, endSecond = SecondLevel(tree, firstResult,
+                                                      firstResult[int(float(req[0][5:]) * 2)],
                                                       endSlinding)  # Вызываем функцию от предыдущей кнопки
+                base['cepType'][idM] = ""
+                base['city'][idM] = ""
+                base['slindingLevelType4Result'][idM] = ""
 
             markup = InlineKeyboardMarkup()  # Определяем кнопку
             for i in range(0, len(SecondResult), 2):  # Бежим по списку, вовзвращенному функцией
                 markup.add(InlineKeyboardButton(text=SecondResult[i],
-                                                callback_data='typDS3' + str(i / 2)))  # Создаем соответствующую кнопку
+                                                callback_data='typDS3' + str(
+                                                    i / 2)))  # Создаем соответствующую кнопку
             markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[8]}"',
                                             callback_data='4'))  # Создаем кнопку возврата к теме
             markup.add(InlineKeyboardButton(text='Вернуться на главную',
@@ -333,35 +445,116 @@ def callback_query(call):
 
             # print(nextPageDS)
 
+        # base = pd.read_excel(os.path.abspath("base.xlsx"))
+        # del (base['Unnamed: 0'])
+        # for i in range(0, len(base)):
+        #     if base['id'][i] == (int(call.message.chat.id)):
+        #         idM = i
+        base['cep'][idM] = cep
+        base['secondResult'][idM] = SecondResult.astype(str)
+        base['endSecond'][idM] = endSecond
+        # base.to_excel(os.path.abspath("base.xlsx"))
+        # base = ""
 
-    elif 'typDS3' in req[0] and cep == 'type30.0':
-        # print(req[0])
-        if 'ChoosingTopicsResult' in globals():
-            cepType = req[0]
-            # print(SecondResult)
-            # slindingResult = SlidingLevel(tree, SecondResult, SecondResult[int(float(req[0][6:])) * 2],
-            #                               endSecond)
-            SlidingLevelTupe4Result = SlidingLevelTupe4(tree, SecondResult, SecondResult[int(float(req[0][6:])) * 2], endSecond)
 
-            markup = InlineKeyboardMarkup()  # Определяем кнопку
-            for i in range(0, len(SlidingLevelTupe4Result), 2):  # Бежим по списку, вовзвращенному функцией
-                markup.add(InlineKeyboardButton(text=SlidingLevelTupe4Result[i],
-                                                callback_data='typDScity' + str(i / 2)))  # Создаем соответствующую кнопку
-            markup.add(InlineKeyboardButton(text='Вернуться на главную',
-                                            callback_data='start'))  # Создаем кнопку возврата на главную страницу
-            bot.edit_message_text(f'Выберите ваш город: ', parse_mode='Markdown', reply_markup=markup,
-                                   chat_id=call.message.chat.id,
-                                  message_id=call.message.message_id)  # Выводим сопутствующее сообщение
-            typGen = 'typGen' + str(i / 2)  # Запоминаем нажатую кнопку
-            # print(typGen)
-            # print(SlidingLevelTupe4Result)
+    elif 'typDS3' in req[0] :
+        # print(call.message.chat.id)
+        # base = pd.read_excel(os.path.abspath("base.xlsx"))
+        # del (base['Unnamed: 0'])
+        # for i in range(0, len(base)):
+        #     if base['id'][i] == (int(call.message.chat.id)):
+        #         idM = i
+        # if 0 == 0:
+        idM = (base['id'].loc[lambda x : (x==call.message.chat.id)].index)[0]
+        SecondResult = (((base['secondResult'][idM])[1:])[:-1]).split("'")
+        del SecondResult[::2]
+        endSecond = base['endSecond'][idM]
+
+        if base['cep'][idM] == 'type31.0':
+            # print(req[0])
+            if 'ChoosingTopicsResult' in globals():
+                cepType = req[0]
+                listTable = pd.read_excel(
+                    os.path.abspath("ДМС/" + SecondResult[int(float(req[0][6:])) * 2] + "/Стоматология.xlsx"))
+                markup = InlineKeyboardMarkup()
+                for i in range(0, len(listTable)):
+                    markup.add(InlineKeyboardButton(text=listTable['Наименование медицинской организации'][i] + " " +
+                                                         listTable['Адрес медицинской организации'][i] + " "
+                                                         + listTable['Телефон'][i] + " ", url=listTable['Сайт'][i]))
+                markup.add(InlineKeyboardButton(text=f'Полный список клиник', parse_mode=markup,
+                                                callback_data='obs'))  # Создаем кнопку возврата на главную страницу
+
+                markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                                callback_data='start'))  # Создаем кнопку возврата на главную страницу
+                bot.edit_message_text(f'Клиники: ', parse_mode='Markdown', reply_markup=markup,
+                                      chat_id=call.message.chat.id,
+                                      message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+
+                base['cepType'][idM] = cepType
+                # base.to_excel(os.path.abspath("base.xlsx"))
+                # base = ""
+
+        elif 'typDS3' in req[0]:
+            # base = pd.read_excel(os.path.abspath("base.xlsx"))
+            # del (base['Unnamed: 0'])
+            # for i in range(0, len(base)):
+            #     if base['id'][i] == (int(call.message.chat.id)):
+            #         idM = i
+
+            idM = (base['id'].loc[lambda x: (x == call.message.chat.id)].index)[0]
+            SecondResult = (((base['secondResult'][idM])[1:])[:-1]).split("'")
+            del SecondResult[::2]
+            endSecond = base['endSecond'][idM]
+
+            if base['cep'][idM] == 'type30.0':
+                # print('mmm')
+                # print(req[0])
+                if 'ChoosingTopicsResult' in globals():
+                    cepType = req[0]
+                    # print(SecondResult)
+                    # print(int(float(req[0][6:])) * 2)
+
+                    SlidingLevelTupe4Result = SlidingLevelTupe4(tree, SecondResult,
+                                                                SecondResult[int(float(req[0][6:])) * 2], endSecond)
+                    # print(SlidingLevelTupe4Result)
+                    markup = InlineKeyboardMarkup()  # Определяем кнопку
+                    for i in range(0, len(SlidingLevelTupe4Result), 2):  # Бежим по списку, вовзвращенному функцией
+                        markup.add(InlineKeyboardButton(text=SlidingLevelTupe4Result[i],
+                                                        callback_data='typDScity' + str(
+                                                            i / 2)))  # Создаем соответствующую кнопку
+                    markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                                    callback_data='start'))  # Создаем кнопку возврата на главную страницу
+                    bot.edit_message_text(f'Выберите ваш город: ', parse_mode='Markdown', reply_markup=markup,
+                                          chat_id=call.message.chat.id,
+                                          message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+                    typGen = 'typGen' + str(i / 2)  # Запоминаем нажатую кнопку
+
+                    base['slindingLevelType4Result'][idM] = SlidingLevelTupe4Result.astype(str)
+                    base['cepType'][idM] = cepType
+                    # base.to_excel(os.path.abspath("base.xlsx"))
+                    # base = ""
+
     elif 'typDScity' in req[0]:
+        # base = pd.read_excel(os.path.abspath("base.xlsx"))
+        # del (base['Unnamed: 0'])
+        # for i in range(0, len(base)):
+        #     if base['id'][i] == (int(call.message.chat.id)):
+        #         idM = i
+
+        idM = (base['id'].loc[lambda x : (x==call.message.chat.id)].index)[0]
+
+        SlidingLevelTupe4Result = (((base['slindingLevelType4Result'][idM])[1:])[:-1]).split("'")
+        del SlidingLevelTupe4Result[::2]
+        cepType = base['cepType'][idM]
+        SecondResult = (((base['secondResult'][idM])[1:])[:-1]).split("'")
+        del SecondResult[::2]
+
 
         if 'ChoosingTopicsResult' in globals():
             listTable = pd.read_excel(os.path.abspath("ДМС/" + SlidingLevelTupe4Result[int(float(req[0][9:])*2)] + '/' + SecondResult[int(float(cepType[6:])*2)]) +".xlsx")
             # del (listTable['Unnamed: 0'])
             city = req[0]
-            print(len(listTable))
+            # print(len(listTable))
             markup = InlineKeyboardMarkup()
             for i in range(0, len(listTable)):
                 # print(listTable['Наименование медицинской организации'][i] + " " + listTable['Адрес медицинской организации'][i] + " "
@@ -376,29 +569,38 @@ def callback_query(call):
         bot.edit_message_text(f"Клиники:", reply_markup=markup,
                               chat_id=call.message.chat.id,
                               message_id=call.message.message_id)
+
+        base['city'][idM] = city
+        # base.to_excel(os.path.abspath("base.xlsx"))
+        # base = ""
+
     elif req[0] == 'clinic':
+        # base = pd.read_excel(os.path.abspath("base.xlsx"))
+        # del (base['Unnamed: 0'])
+        # for i in range(0, len(base)):
+        #     if base['id'][i] == (int(call.message.chat.id)):
+
+        idM = (base['id'].loc[lambda x : (x==call.message.chat.id)].index)[0]
+        city = base['city'][idM]
+        SlidingLevelTupe4Result = (((base['slindingLevelType4Result'][idM])[1:])[:-1]).split("'")
+        del SlidingLevelTupe4Result[::2]
+        # base = ""
+
         pth = os.path.abspath("ДМС/" + SlidingLevelTupe4Result[int(float(city[9:])*2)] + '/' + "Общий.xlsx")
         bot.send_document(call.message.chat.id, open((pth), 'rb'))
 
-    elif 'typDS3' in req[0] and cep == 'type31.0':
-        # print(req[0])
-        if 'ChoosingTopicsResult' in globals():
-            cepType = req[0]
-            listTable = pd.read_excel(os.path.abspath("ДМС/" + SecondResult[int(float(req[0][6:])) * 2] + "/Стоматология.xlsx"))
-            markup = InlineKeyboardMarkup()
-            for i in range(0, len(listTable)):
-                markup.add(InlineKeyboardButton(text=listTable['Наименование медицинской организации'][i] + " " +
-                                                     listTable['Адрес медицинской организации'][i] + " "
-                                                     + listTable['Телефон'][i] + " ", url=listTable['Сайт'][i]))
-            markup.add(InlineKeyboardButton(text=f'Полный список клиник', parse_mode=markup,
-                                            callback_data='obs'))  # Создаем кнопку возврата на главную страницу
-
-            markup.add(InlineKeyboardButton(text='Вернуться на главную',
-                                            callback_data='start'))  # Создаем кнопку возврата на главную страницу
-            bot.edit_message_text(f'Клиники: ', parse_mode='Markdown', reply_markup=markup,
-                                   chat_id=call.message.chat.id,
-                                  message_id=call.message.message_id)  # Выводим сопутствующее сообщение
     elif req[0] == 'obs':
+        # base = pd.read_excel(os.path.abspath("base.xlsx"))
+        # del (base['Unnamed: 0'])
+        # for i in range(0, len(base)):
+        #     if base['id'][i] == (int(call.message.chat.id)):
+
+        idM = (base['id'].loc[lambda x : (x==call.message.chat.id)].index)[0]
+        cepType = base['cepType'][idM]
+        SecondResult = (((base['secondResult'][idM])[1:])[:-1]).split("'")
+        del SecondResult[::2]
+        # base = ""
+
         f = open("ДМС/" + SecondResult[int(float(cepType[6:])) * 2] + "/Общий.xlsx", "rb")
         bot.send_document(call.message.chat.id, f)
 
@@ -419,20 +621,45 @@ def callback_query(call):
         bot.edit_message_text(emoji.emojize(f"Для какой категории вас интересуют нормы ГТО? :man_cartwheeling:\n [Ссылочка на официальный сайт](https://www.gto.ru/norms)"), parse_mode='Markdown',
                               reply_markup=markup, chat_id=call.message.chat.id,
                               message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+        # base = pd.read_excel(os.path.abspath("base.xlsx"))
+        # del (base['Unnamed: 0'])
+        idM = (base['id'].loc[lambda x: (x == call.message.chat.id)].index)[0]
+        base['firstResult'][idM] = firstResult.astype(str)
+        base['endSlinding'][idM] = str(endSlinding)
+        base['secondResult'][idM] = ""
+        base['endSecond'][idM] = ""
+        base['page'][idM] = "0"
+        base['nextPage1'][idM] = ""
+        # base.to_excel(os.path.abspath("base.xlsx"))
+        # base = ""
+
     elif 'type4' in req[0]:  # Если метка содержит type4
         if 'ChoosingTopicsResult' in globals():
+            # base = pd.read_excel(os.path.abspath("base.xlsx"))
+            # del (base['Unnamed: 0'])
+            idM = (base['id'].loc[lambda x: (x == call.message.chat.id)].index)[0]
+            firstResult = (((base['firstResult'][idM])[1:])[:-1]).split("'")
+            del firstResult[::2]
+            endSlinding = int(base['endSlinding'][idM])
+            page = int(base['page'][idM])
+            nextPage1 = str(base['nextPage1'][idM])
+            # base['req'] = req[0]
+
             if page == 0:
                 SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(req[0][5:]) * 2)],
                                                       endSlinding)  # Вызываем функцию
                 nextPage1 = req[0]  # Запоминаем нажатую кнопку
+                base['nextPage1'][idM] = str(nextPage1)
             else:
-                SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(nextPage1[5:]) * 2)],
+                SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[(int(float(nextPage1[5:])+1) * 2)],
                                                       endSlinding)  # Вызываем функцию от предыдущей кнопки
+                page -= 1
+
             markup = InlineKeyboardMarkup()  # Определяем кнопку
             for i in range(0, len(SecondResult), 2):  # Бежим по списку, вовзвращенному функцией
                 markup.add(InlineKeyboardButton(text=SecondResult[i],
                                                 callback_data='typ4' + str(i / 2)))  # Создаем соответствующую кнопку
-            markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[6]}"',
+            markup.add(InlineKeyboardButton(text=f'Вернуться к группам',
                                             callback_data='3'))  # Создаем кнопку возврата к теме
             markup.add(InlineKeyboardButton(text='Вернуться на главную',
                                             callback_data='start'))  # Создаем кнопку возврата на главную страницу
@@ -440,20 +667,42 @@ def callback_query(call):
                                   chat_id=call.message.chat.id,
                                   message_id=call.message.message_id)  # Выводим сопутствующее сообщение
             page += 1
+            base['secondResult'][idM] = SecondResult.astype(str)
+            base['endSecond'][idM] = str(endSecond)
+            # print(base['id'][idM])
+            # print(SecondResult)
+            base['page'][idM] = str(page)
+            # base.to_excel(os.path.abspath("base.xlsx"))
+            # base = ""
+
         else:
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton(text=emoji.emojize('Начать :detective:'), callback_data='start'))
             bot.edit_message_text(emoji.emojize(f'Я немного подучился :desktop_computer: и готов помогать вам дальше! :man_running: Давайте снова начнем общаться! :e-mail:'),
                                   reply_markup=markup, chat_id=call.message.chat.id, message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+
     elif 'typ4' in req[0]:  # Если метка содержит typ4
+
         if 'ChoosingTopicsResult' in globals():
+            # base = pd.read_excel(os.path.abspath("base.xlsx"))
+            # del (base['Unnamed: 0'])
+            idM = (base['id'].loc[lambda x: (x == call.message.chat.id)].index)[0]
+            SecondResult = (((base['secondResult'][idM])[1:])[:-1]).split("'")
+            del SecondResult[::2]
+
+            endSecond = int(base['endSecond'][idM])
+            nextPage1 = str(base['nextPage1'][idM])
+            # base['nextPage1'][idM] = ""
+            # base.to_excel(os.path.abspath("base.xlsx"))
+            # base=""
+
             slindingResult = SlidingLevel(tree, SecondResult, SecondResult[int(float(req[0][4:])) * 2],
                                           endSecond)  # Вызываем функцию
             markup = InlineKeyboardMarkup()  # Определяем кнопку
 
             markup.add(InlineKeyboardButton(text=f'Вернуться к "{firstResult[int(float(nextPage1[5:])) * 2]}"',
                                             callback_data='type4'))  # Создаем кнопку возврата к теме
-            markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[6]}"',
+            markup.add(InlineKeyboardButton(text=f'Вернуться к к группам',
                                             callback_data='3'))  # Создаем кнопку возврата к теме
             markup.add(InlineKeyboardButton(text='Вернуться на главную',
                                             callback_data='start'))  # Создаем кнопку возврата на главную страницу
@@ -483,8 +732,31 @@ def callback_query(call):
                               chat_id=call.message.chat.id,
                               message_id=call.message.message_id)  # Выводим сопутствующее сообщение
         s = 0
+
+        # base = pd.read_excel(os.path.abspath("base.xlsx"))
+        # del (base['Unnamed: 0'])
+        idM = (base['id'].loc[lambda x: (x == call.message.chat.id)].index)[0]
+        base['s'][idM] = s
+        base['page'][idM] = page
+        base['firstResult'][idM] = firstResult.astype(str)
+        base['endSlinding'][idM] = endSlinding
+        base['slindingResult'][idM] = ""
+        base['nextPage'][idM] = ""
+        # base.to_excel(os.path.abspath("base.xlsx"))
+        # base = ""
+
+
+
     elif 'name10.0' == req[0]:  # Если метка содержит name10.0
         if 'ChoosingTopicsResult' in globals():
+            # base = pd.read_excel(os.path.abspath("base.xlsx"))
+            # del (base['Unnamed: 0'])
+            idM = (base['id'].loc[lambda x: (x == call.message.chat.id)].index)[0]
+            firstResult = (((base['firstResult'][idM])[1:])[:-1]).split("'")
+            del firstResult[::2]
+            endSlinding = base['endSlinding'][idM]
+            # base=""
+
             slindingResult = SlidingLevel(tree, firstResult, firstResult[int(float(req[0][5:])) * 2],
                                           endSlinding)  # Вызываем функцию
             markup = InlineKeyboardMarkup()  # Определяем кнопку
@@ -501,8 +773,19 @@ def callback_query(call):
             markup.add(InlineKeyboardButton(text=emoji.emojize('Начать :detective:'), callback_data='start'))
             bot.edit_message_text(emoji.emojize(f'Я немного подучился :desktop_computer: и готов помогать вам дальше! :man_running: Давайте снова начнем общаться! :e-mail:'),
                                   reply_markup=markup, chat_id=call.message.chat.id, message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+
     elif 'name10.0' != req[0] and 'name1' in req[0]:  # Если метка не содержит name10.0
         if 'ChoosingTopicsResult' in globals():
+            # base = pd.read_excel(os.path.abspath("base.xlsx"))
+            # del (base['Unnamed: 0'])
+            idM = (base['id'].loc[lambda x: (x == call.message.chat.id)].index)[0]
+            firstResult = (((base['firstResult'][idM])[1:])[:-1]).split("'")
+            del firstResult[::2]
+            endSlinding = base['endSlinding'][idM]
+            page = int(base['page'][idM])
+            s = int(base['s'][idM])
+
+
             if s == 1:  # Определяем направление движения
                 page = page + 2
             nextPage = req[0]  # Запоминаем нажатую кнопку
@@ -526,13 +809,30 @@ def callback_query(call):
                 bot.edit_message_text(f'Проосмотр видео:', reply_markup=markup, chat_id=call.message.chat.id,
                                       message_id=call.message.message_id)  # Выводим сопутствующее сообщение
                 page = page + 2
+
+            base['s'][idM] = s
+            base['page'][idM] = page
+            base['slindingResult'][idM] = slindingResult.astype(str)
+            base['nextPage'][idM] = nextPage
+            # base.to_excel(os.path.abspath("base.xlsx"))
+            # base = ""
         else:
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton(text=emoji.emojize('Начать :detective:'), callback_data='start'))
             bot.edit_message_text(emoji.emojize(f'Я немного подучился :desktop_computer: и готов помогать вам дальше! :man_running: Давайте снова начнем общаться! :e-mail:'),
                                   reply_markup=markup, chat_id=call.message.chat.id, message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+
     elif req[0] == 'backpage1':  # Если метка backpage1
         if 'ChoosingTopicsResult' in globals():
+            # base = pd.read_excel(os.path.abspath("base.xlsx"))
+            # del (base['Unnamed: 0'])
+            idM = (base['id'].loc[lambda x: (x == call.message.chat.id)].index)[0]
+            slindingResult = (((base['slindingResult'][idM])[1:])[:-1]).split("'")
+            del slindingResult[::2]
+            nextPage = base['nextPage'][idM]
+            page = int(base['page'][idM])
+            s = int(base['s'][idM])
+
             if s == 0:  # Определяем направление движения
                 page = page - 2
             s = 1
@@ -552,6 +852,11 @@ def callback_query(call):
                                                 callback_data='start'))  # Создаем кнопку возврата на главную страницу
                 bot.edit_message_text(f'Проосмотр видео:', reply_markup=markup, chat_id=call.message.chat.id,
                                       message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+
+            base['s'][idM] = s
+            base['page'][idM] = page
+            # base.to_excel(os.path.abspath("base.xlsx"))
+            # base = ""
         else:
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton(text=emoji.emojize('Начать :detective:'), callback_data='start'))
@@ -669,8 +974,10 @@ def callback_query(call):
     #         markup.add(InlineKeyboardButton(text=emoji.emojize('Начать :detective:'), callback_data='start'))
     #         bot.edit_message_text(emoji.emojize(f'Я немного подучился :desktop_computer: и готов помогать вам дальше! :man_running: Давайте снова начнем общаться! :e-mail:'),
     #                               reply_markup=markup, chat_id=call.message.chat.id, message_id=call.message.message_id)  # Выводим сопутствующее сообщение
-    # # print(req[0])
+    # print(req[0])
+    base.to_excel(os.path.abspath("base.xlsx"))
 
+#
 
 # Обработчик входящих сообщений
 @bot.message_handler(commands=['start'])  # Начинаем работу
@@ -684,6 +991,18 @@ def start(m):
     bot.send_message(m.from_user.id, emoji.emojize(
         "Добрый день!:hand_with_fingers_splayed: Вы хотите узнать что-то про ЗОЖ?:red_question_mark: Тогда, нажмите кнопку: :play_button:"),
                     reply_markup=markup)  # Выводим сопутствующее сообщение
+    base = pd.read_excel(os.path.abspath("base.xlsx"))
+    col = base.columns
+    if 'Unnamed: 0' in col:
+        del(base['Unnamed: 0'])
+    duble = 0
+    for i in range(0, len(base)):
+        if base['id'][i] == (m.from_user.id):
+            duble += 1
+    if duble ==0:
+        base = base.append({"id": m.from_user.id}, ignore_index=True)
+        base.to_excel(os.path.abspath("base.xlsx"))
+    base = ""
 
 
 @bot.message_handler()  # Обрабатываем текстовые сообщения
@@ -693,8 +1012,26 @@ def start(m):
         "Увы! :weary_face: Я умею общаться только кнопками(	:woman_facepalming: Поэтому, пожалуйста, напишите мне /start, чтобы снова начать общение! :beating_heart:"))  # Выводим сопутствующее сообщение
 
 if __name__ == '__main__':
+    # ScheduleMessage.start_process()
 
-    bot.polling(none_stop=True)
+    # my_thread = threading.Thread(target=callback_query)
+    # my_thread.start()
+    # t1 = threading.Thread(target=callback_query, args=__name__, daemon=True)
+    # t1.start()
+    # t1.join()
+    import concurrent.futures
+    import time
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        for index in range(2):
+            executor.submit(callback_query, index)
+
+    # bot.polling(none_stop=True)
+    while True:
+        try:
+            bot.polling(none_stop=True)
+        except:
+            time.sleep(0.1)
+
 
 
 
