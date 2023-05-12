@@ -1,0 +1,8 @@
+telebot==0.0.5
+telegram==0.0.1
+pandas==1.4.0
+numpy==1.23.4
+emoji==2.1.0
+schedule==1.1.0
+pathlib==1.0.1
+aiogram==2.24
