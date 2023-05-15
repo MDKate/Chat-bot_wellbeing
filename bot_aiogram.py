@@ -207,7 +207,7 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
         firstResult, endSlinding = FirstLevel(tree, ChoosingTopicsResult[int(req[0]) * 2],
                                               ChoosingTopicsResult)  # Вызываем функцию
         markup = InlineKeyboardMarkup()  # Определяем кнопку
-        markup.add(InlineKeyboardButton(text=firstResult[0], url='https://vk.com/'))  # Создаем соответствующие кнопки
+        markup.add(InlineKeyboardButton(text=firstResult[0], url='https://t.me/+IrCCc6c5d9hmNjYy'))  # Создаем соответствующие кнопки
         markup.add(InlineKeyboardButton(text='Вернуться на главную',
                                         callback_data='start'))  # Создаем кнопку возврата на главную страницу
         await botMes.edit_message_text(emoji.emojize(f"А вот и ссылочка на чат для общения) 	:smiling_face_with_heart-eyes:"),
@@ -223,19 +223,20 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
     # --------------------------------------------------------------Ветка секции----------------------------------------------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     elif req[0] == '6':  # Если метка 6
-        ChoosingTopicsResult = ChoosingTopics(tree) # Вызываем функцию
+        ChoosingTopicsResult = ChoosingTopics(tree)  # Вызываем функцию
         firstResult, endSlinding = FirstLevel(tree, ChoosingTopicsResult[int(req[0]) * 2],
                                               ChoosingTopicsResult)  # Вызываем функцию
         markup = InlineKeyboardMarkup()  # Определяем кнопку
         for i in range(0, len(firstResult), 2):  # Бежим по списку, вовзвращенному функцией
             markup.add(
-                InlineKeyboardButton(text=firstResult[i], callback_data='Sect'+str(i / 2)))  # Создаем соответствующие кнопки
+                InlineKeyboardButton(text=firstResult[i],
+                                     callback_data='Sect' + str(i / 2)))  # Создаем соответствующие кнопки
         markup.add(InlineKeyboardButton(text='Вернуться на главную',
                                         callback_data='start'))  # Создаем кнопку возврата на главную страницу
         await botMes.edit_message_text(emoji.emojize(
             f"Выберите город, для которого вы хотите узнать расписание работы секций) :woman_swimming:"),
-                              reply_markup=markup, chat_id=call.message.chat.id,
-                              message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+            reply_markup=markup, chat_id=call.message.chat.id,
+            message_id=call.message.message_id)  # Выводим сопутствующее сообщение
         # Сохраняем переменные в БД
         firstResult = ','.join(firstResult)
         ChoosingTopicsResult = ','.join(ChoosingTopicsResult)
@@ -243,10 +244,11 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
         await edit_profile('endSlinding', endSlinding, call.message.chat.id)
         await edit_profile('ChoosingTopicsResult', ChoosingTopicsResult, call.message.chat.id)
 
-    elif 'Sect' in req[0]: #Детализация списка секций по выбранному городу
-        sectCity = firstResult[int(float(req[0][4:]))*2] #Определяем выбранный город
+    elif 'Sect' in req[0]:  # Детализация списка секций по выбранному городу
+        sectCity = firstResult[int(float(req[0][4:])) * 2]  # Определяем выбранный город
         markup = InlineKeyboardMarkup()  # Определяем кнопку
-        await call.message.answer_photo(open(os.path.abspath(f"Секции\{str(sectCity)}.png"), 'rb')) #Отправляем фото с  расписанием работы секций
+        await call.message.answer_photo(
+            open(os.path.abspath(f"Секции\{str(sectCity)}.png"), 'rb'))  # Отправляем фото с  расписанием работы секций
         markup.add(InlineKeyboardButton(text='Вернуться к выбору города',
                                         callback_data='6'))  # Создаем кнопку возврата на главную страницу
         markup.add(InlineKeyboardButton(text='Вернуться на главную',
@@ -429,9 +431,13 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
 
         markup = InlineKeyboardMarkup()
         for i in range(0, len(listTable)):
-            markup.add(InlineKeyboardButton(text=listTable['Наименование медицинской организации'][i] + " " +
+        # for i in range(0, 1):
+            if pd.isna(listTable['Телефон'][i]) == True: listTable['Телефон'][i] = " "
+            if pd.isna(listTable['Наименование медицинской организации'][i]) == True: listTable['Наименование медицинской организации'][i] = " "
+            if pd.isna(listTable['Адрес медицинской организации'][i]) == True: listTable['Адрес медицинской организации'][i] = " "
+            markup.add(InlineKeyboardButton(text=str(listTable['Наименование медицинской организации'][i] + " " +
                                                      listTable['Адрес медицинской организации'][i] + " "
-                                                     + listTable['Телефон'][i] + " ", url=listTable['Сайт'][i])) # Создаем кнопки для каждой клиники
+                                                     + listTable['Телефон'][i]), url=listTable['Сайт'][i])) # Создаем кнопки для каждой клиники
         markup.add(InlineKeyboardButton(text=f'Полный список клиник',
                                             callback_data='obs'))  # Создаем кнопку возврата на главную страницу
         markup.add(InlineKeyboardButton(text='Вернуться к типу ДМС',
@@ -451,8 +457,11 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
         city = req[0] # Запоминаем значение текущей кнопки
         markup = InlineKeyboardMarkup() # Создаем клавиатуру
         for i in range(0, len(listTable)):
-            markup.add(InlineKeyboardButton(text=listTable['Наименование медицинской организации'][i] + " " + listTable['Адрес медицинской организации'][i] + " "
-                      + listTable['Телефон'][i] + " ", url=listTable['Сайт'][i])) # Создаем кнопки для каждой клиники
+            if pd.isna(listTable['Телефон'][i]) == True: listTable['Телефон'][i] = " "
+            if pd.isna(listTable['Наименование медицинской организации'][i]) == True: listTable['Наименование медицинской организации'][i] = " "
+            if pd.isna(listTable['Адрес медицинской организации'][i]) == True: listTable['Адрес медицинской организации'][i] = " "
+            markup.add(InlineKeyboardButton(text=str(listTable['Наименование медицинской организации'][i] + " " + listTable['Адрес медицинской организации'][i] + " "
+                      + listTable['Телефон'][i]), url=listTable['Сайт'][i])) # Создаем кнопки для каждой клиники
 
         markup.add(InlineKeyboardButton(text=f'Полный список клиник',
                                         callback_data=f'clinic'))  # Создаем кнопку возврата на главную страницу
@@ -615,8 +624,12 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
                                                 callback_data='2'))  # Создаем кнопку возврата к теме
             markup.add(InlineKeyboardButton(text='Вернуться на главную',
                                                 callback_data='start'))  # Создаем кнопку возврата на главную страницу
-            await botMes.edit_message_text(f'Проосмотр видео:', reply_markup=markup, chat_id=call.message.chat.id,
-                                      message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+            # await botMes.edit_message_text(f'Проосмотр видео:', reply_markup=markup, chat_id=call.message.chat.id,
+            #                           message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+            await botMes.edit_message_text(f'<a href="{str(slindingResult[page])}">Проосмотр видео: </a>',
+                                           parse_mode=types.ParseMode.HTML, reply_markup=markup,
+                                           chat_id=call.message.chat.id,
+                                           message_id=call.message.message_id)  # Выводим сопутствующее сообщение
             page = page + 2
         # Сохраняем переменные в БД
         slindingResult = ','.join(slindingResult)
@@ -644,8 +657,12 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
                                                 callback_data='2'))  # Создаем кнопку возврата к теме
             markup.add(InlineKeyboardButton(text='Вернуться на главную',
                                                 callback_data='start'))  # Создаем кнопку возврата на главную страницу
-            await botMes.edit_message_text(f'Проосмотр видео:', reply_markup=markup, chat_id=call.message.chat.id,
-                                      message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+            # await botMes.edit_message_text(f'Проосмотр видео:', reply_markup=markup, chat_id=call.message.chat.id,
+            #                           message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+            await botMes.edit_message_text(f'<a href="{str(slindingResult[page])}">Проосмотр видео: </a>',
+                                           parse_mode=types.ParseMode.HTML, reply_markup=markup,
+                                           chat_id=call.message.chat.id,
+                                           message_id=call.message.message_id)  # Выводим сопутствующее сообщение
         # Сохраняем переменные в БД
         await edit_profile('page', page, call.message.chat.id)
         await edit_profile('s', s, call.message.chat.id)
