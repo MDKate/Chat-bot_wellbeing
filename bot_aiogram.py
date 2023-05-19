@@ -249,9 +249,9 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
     elif 'Sect' in req[0]:  # Детализация списка секций по выбранному городу
         sectCity = firstResult[int(float(req[0][4:])) * 2]  # Определяем выбранный город
         markup = InlineKeyboardMarkup()  # Определяем кнопку
-        # print(os.path.abspath(pathlib.Path("Секции", f"{str(sectCity)}.png")), 'rb')
+        # print(os.path.abspath(pathlib.Path("Секции", f"{str(sectCity)}.PNG")), 'rb')
         await call.message.answer_photo(
-            open(os.path.abspath(pathlib.Path("Секции", f"{str(sectCity)}.png")), 'rb'))  # Отправляем фото с  расписанием работы секций
+            open(os.path.abspath(pathlib.Path("Секции", f"{str(sectCity)}.PNG")), 'rb'))  # Отправляем фото с  расписанием работы секций
         markup.add(InlineKeyboardButton(text='Вернуться к выбору города',
                                         callback_data='6'))  # Создаем кнопку возврата на главную страницу
         markup.add(InlineKeyboardButton(text='Вернуться на главную',
@@ -492,7 +492,7 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
         await botMes.send_document(call.message.chat.id, open((pth), 'rb'))
 
     elif req[0] == 'obs': # Если отправляем файл для стоматологии
-        f = open(pathlib.Path("ДМС", f"{SecondResult[int(float(cepType[6:])) * 2]}", "Общий.xlsx", "rb"))
+        f = open(pathlib.Path("ДМС", f"{SecondResult[int(float(cepType[6:])) * 2]}", "Общий.xlsx"), "rb")
         await botMes.send_document(call.message.chat.id, f)
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     # --------------------------------------------------------------Ветка ГТО----------------------------------------------------------------------------------------
