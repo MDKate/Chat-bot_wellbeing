@@ -1,4 +1,5 @@
 import sqlite3 as sq
+import pandas as pd
 
 async def db_start():
     global db, cur
@@ -7,12 +8,17 @@ async def db_start():
     cur.execute("CREATE TABLE IF NOT EXISTS base(user_id TEXT, count TEXT, city TEXT, page TEXT, ChoosingTopicsResult TEXT, firstResult TEXT, endSlinding TEXT, slindingResult TEXT, nextPage TEXT, nextPage1 TEXT, nextPageDS TEXT, SecondResult TEXT, SlidingLevelTupe4Result TEXT, endSecond TEXT, slindingType5Result TEXT, s TEXT,  cep TEXT, typGen TEXT, cepType TEXT)")
     cur.execute("CREATE TABLE IF NOT EXISTS logs(user_id TEXT, date TEXT, time TEXT, req TEXT)")
     db.commit()
+    cur.execute("SELECT name FROM pragma_table_info('base') WHERE name='replay_button'")
+    result = cur.fetchone()
+    if result is None:
+        cur.execute("ALTER TABLE base ADD replay_button TEXT")
+        db.commit()
 
 
 async def create_profile(user_id):
     user = cur.execute("SELECT 1 FROM base WHERE user_id == '{key}'".format(key=user_id)).fetchone()
     if not user:
-        cur.execute("INSERT INTO base VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (user_id, 0, '', 0, '', '', '', '', '', '', '', '', '', '', '', 0, '', '', ''))
+        cur.execute("INSERT INTO base VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (user_id, 0, '', 0, '', '', '', '', '', '', '', '', '', '', '', 0, '', '', '', ''))
         db.commit()
 
 async def logs_insert(user_id, date, time, req):
@@ -139,3 +145,7 @@ async def cepType_value_from_db(user_id):
     cur.execute("SELECT cepType FROM base WHERE user_id=?", (user_id,))
     result = cur.fetchone()
     return result[0] if result else None
+
+async def all_table_from_db(table_name_db): #Чтение всей таблицы во фрейм
+    df = pd.read_sql(f"SELECT * FROM {table_name_db}", sq.connect('new.db'))
+    return df

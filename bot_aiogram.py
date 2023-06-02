@@ -2,11 +2,12 @@ import pandas as pd
 import numpy as np
 import emoji
 import datetime
+import  asyncio
 import os
 import pathlib
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
-from SQL import db_start, create_profile, logs_insert, edit_profile, count_value_from_db, city_value_from_db, page_value_from_db, ChoosingTopicsResult_value_from_db, firstResult_value_from_db, endSlinding_value_from_db, slindingResult_value_from_db, nextPage_value_from_db, nextPage1_value_from_db,nextPageDS_value_from_db,SecondResult_value_from_db,endSecond_value_from_db,slindingType5Result_value_from_db, s_value_from_db, cep_value_from_db, typGen_value_from_db, cepType_value_from_db, SlidingLevelTupe4Result_value_from_db
+from SQL import db_start, create_profile, logs_insert, edit_profile, count_value_from_db, city_value_from_db, page_value_from_db, ChoosingTopicsResult_value_from_db, firstResult_value_from_db, endSlinding_value_from_db, slindingResult_value_from_db, nextPage_value_from_db, nextPage1_value_from_db,nextPageDS_value_from_db,SecondResult_value_from_db,endSecond_value_from_db,slindingType5Result_value_from_db, s_value_from_db, cep_value_from_db, typGen_value_from_db, cepType_value_from_db, SlidingLevelTupe4Result_value_from_db, all_table_from_db
 
 # Подключаемся к боту
 botMes = Bot(open(os.path.abspath('token.txt')).read())
@@ -20,27 +21,36 @@ del (tree['Unnamed: 0'])
 # Подключаемся к БД
 async def on_startup(_):
     await db_start()
+    df = await all_table_from_db(table_name_db='base')
+    buttons = [['Вернуться к выбору раздела', 'Помощь']]
+    markupRK = ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=False)
+
+    for i in range(0, len(df)):
+        if df['replay_button'][i] is None:
+            await botMes.send_message(text='У нас обновление! Теперь в клавиатуре есть волшебные кнопочки!😊', chat_id=df['user_id'][i], reply_markup=markupRK)
+            await edit_profile(name='replay_button', value=1, user_id=df['user_id'][i])
+
 
 # Создаем глобальные переменные
-global count
-global city
-global page
-global ChoosingTopicsResult
-global firstResult
-global endSlinding
-global slindingResult
-global nextPage
-global nextPage1
-global nextPageDS
-global SecondResult
-global SlidingLevelTupe4Result
-global endSecond
-global slindingType5Result
-global s
-global logs1
-global cep
-global typGen
-global cepType
+# global count
+# global city
+# global page
+# global ChoosingTopicsResult
+# global firstResult
+# global endSlinding
+# global slindingResult
+# global nextPage
+# global nextPage1
+# global nextPageDS
+# global SecondResult
+# global SlidingLevelTupe4Result
+# global endSecond
+# global slindingType5Result
+# global s
+# global logs1
+# global cep
+# global typGen
+# global cepType
 
 
 # Реагируем на нажатие на кнопки
@@ -186,6 +196,7 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
     # --------------------------------------------------------------Начало работы----------------------------------------------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     if req[0] == 'start':  # Если метка start
+
         ChoosingTopicsResult = ChoosingTopics(tree) # Вызываем функцию
         markup = InlineKeyboardMarkup()  # Определяем кнопку
         for i in range(0, len(ChoosingTopicsResult), 2):  # Бежим по списку, вовзвращенному функцией
@@ -260,7 +271,8 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
         await botMes.edit_message_text(emoji.emojize(
             f"Вот расписание для города {sectCity}:woman_swimming:"),
             reply_markup=markup, message_id=call.message.message_id, chat_id=call.message.chat.id)  # Выводим сопутствующее сообщение
-
+        await botMes.send_message(text=emoji.emojize(f"Вот расписание для города {sectCity}:woman_swimming:"),
+            reply_markup=markup,  chat_id=call.message.chat.id)
 
 
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -437,6 +449,7 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
         listTable = pd.read_excel(
             os.path.abspath(pathlib.Path("ДМС", f"{SecondResult[int(float(req[0][6:])) * 2]}", "Стоматология.xlsx"))) # Выбираем нужный файл
 
+
         markup = InlineKeyboardMarkup()
         for i in range(0, len(listTable)):
         # for i in range(0, 1):
@@ -490,10 +503,30 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
     elif 'clinic' in req[0]: # Если отправляем файл для общего ДМС
         pth = os.path.abspath(pathlib.Path("ДМС", f"{SlidingLevelTupe4Result[int(float(city[9:])*2)]}", "Общий.xlsx"))
         await botMes.send_document(call.message.chat.id, open((pth), 'rb'))
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton(text='Вернуться к типу помощи',
+                                        callback_data=cep))  # Кнопка возврата к типу помощи
+        markup.add(InlineKeyboardButton(text='Вернуться к выбору города',
+                                        callback_data=cepType))  # Кнопка возврата к выбору города
+        markup.add(InlineKeyboardButton(text='Вернуться к типу ДМС',
+                                        callback_data='4'))  # Кнопка возврата к ДМС
+        markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                        callback_data='start'))  # Создаем кнопку возврата на главную страницу
+        await botMes.send_message(text=f'Вернуться к выбору:', reply_markup=markup, chat_id=call.message.chat.id)
 
     elif req[0] == 'obs': # Если отправляем файл для стоматологии
         f = open(pathlib.Path("ДМС", f"{SecondResult[int(float(cepType[6:])) * 2]}", "Общий.xlsx"), "rb")
         await botMes.send_document(call.message.chat.id, f)
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton(text='Вернуться к типу помощи',
+                                        callback_data=cep))  # Кнопка возврата к типу помощи
+        markup.add(InlineKeyboardButton(text='Вернуться к выбору города',
+                                        callback_data=cepType))  # Кнопка возврата к выбору города
+        markup.add(InlineKeyboardButton(text='Вернуться к типу ДМС',
+                                        callback_data='4'))  # Кнопка возврата к ДМС
+        markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                        callback_data='start'))  # Создаем кнопку возврата на главную страницу
+        await botMes.send_message(text=f'Вернуться к выбору:', reply_markup=markup, chat_id=call.message.chat.id)
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     # --------------------------------------------------------------Ветка ГТО----------------------------------------------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -794,12 +827,61 @@ async def start(message: types.message):
                     reply_markup=markup)  # Выводим сопутствующее сообщение
     # Создаем в БД строку для нового человека (старого - перезаписываем)
     await create_profile(user_id=message.from_user.id)
+    buttons = [['Вернуться к выбору раздела', 'Помощь']]
+    markupRK = ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=False)
+
+    df = await all_table_from_db(table_name_db='base')
+    # print((df[df['user_id'] == str(message.chat.id)]['replay_button']).values[0])
+    if (df[df['user_id'] == str(message.chat.id)]['replay_button']).values[0] != 1:
+            await botMes.send_message(text='У нас обновление! Теперь в клавиатуре есть волшебные кнопочки!😊',
+                                      chat_id=message.chat.id, reply_markup=markupRK)
+            await edit_profile(name='replay_button', value=1, user_id=message.chat.id)
 
 
 
 @bot.message_handler()  # Обрабатываем текстовые сообщения
-async def start(message: types.message):
-    await message.reply(emoji.emojize(
+async def start(message: types.message, tree=tree):
+
+    def ChoosingTopics(tree):
+        TopicName = np.array([str(tree['Name'][0:1][0]), 0])  # Заполняем первое значение первым именем ветки
+        for i in range(1, len(tree)):  # Бежим по всей таблице
+            if int(tree['FirstLevel'][i - 1:i]) != int(
+                    tree['FirstLevel'][i:i + 1]):  # Если текущая строка означает другую ветку, то
+                TopicName = np.append(TopicName, tree['Name'][i:i + 1])  # Записать имя новой ветки
+                TopicName = np.append(TopicName, str(i))  # Записываем ссылку на координаты
+        return TopicName
+
+    count = await count_value_from_db(message.chat.id)
+    count = int(count)
+    page = await page_value_from_db(message.chat.id)
+    page = int(page)
+    ChoosingTopicsResult = await ChoosingTopicsResult_value_from_db(message.chat.id)
+    if len(str(ChoosingTopicsResult)) > 5:
+        ChoosingTopicsResult = str(ChoosingTopicsResult).split(',')
+
+
+
+
+    if message.text == 'Вернуться к выбору раздела':
+        ChoosingTopicsResult = ChoosingTopics(tree)  # Вызываем функцию
+        markup = InlineKeyboardMarkup()  # Определяем кнопку
+        for i in range(0, len(ChoosingTopicsResult), 2):  # Бежим по списку, вовзвращенному функцией
+            markup.add(InlineKeyboardButton(text=ChoosingTopicsResult[i],
+                                            callback_data=str(int(i / 2))))  # Создаем соответствующие кнопки
+        await botMes.send_message(text=emoji.emojize(f"Выберите раздел: :magnifying_glass_tilted_left: "),
+                                       reply_markup=markup,
+                                       chat_id=message.chat.id)  # Выводим сопутствующее сообщение
+        page = 0
+        count = 0
+        # Сохраняем переменные в БД
+        ChoosingTopicsResult = ','.join(ChoosingTopicsResult)  # Функция преобразования массива в строку
+        await edit_profile('ChoosingTopicsResult', ChoosingTopicsResult, message.chat.id)
+        await edit_profile('page', page, message.chat.id)
+        await edit_profile('count', count, message.chat.id)
+    elif message.text == 'Помощь':
+        await botMes.send_message(text='Если вам необходима консультация 🧐 или у вас что-то сломалось 😱, вы можете написать о своей проблеме в чат техподдержки ⚙: <a href="https://t.me/+90xxSovog65lMjM6">Чат техподдержки</a>', chat_id=message.chat.id, parse_mode=types.ParseMode.HTML)
+    else:
+        await message.reply(emoji.emojize(
         "Увы! :weary_face: Я умею общаться только кнопками(	:woman_facepalming: Поэтому, пожалуйста, напишите мне /start, чтобы снова начать общение! :beating_heart:"))  # Выводим сопутствующее сообщение
 
 if __name__ == '__main__':
