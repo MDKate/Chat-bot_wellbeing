@@ -539,6 +539,7 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
         for i in range(0, len(firstResult), 2):  # Бежим по списку, вовзвращенному функцией
             markup.add(InlineKeyboardButton(text=firstResult[i],
                                             callback_data='type4' + str(i / 2)))  # Создаем соответствующую кнопку
+            # print('type4' + str(i / 2))
         markup.add(InlineKeyboardButton(text='Вернуться на главную',
                                         callback_data='start'))  # Создаем кнопку возврата на главную страницу
         await botMes.edit_message_text('Для какой категории вас интересуют нормы ГТО? \n'+'<a href="https://www.gto.ru/norms"> [Ссылочка на официальный сайт]</a>',
@@ -546,14 +547,79 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
                                                      chat_id=call.message.chat.id,
                                                      message_id=call.message.message_id)  # Выводим сопутствующее сообщение
         # Сохраняем переменные в БД
+        # print(ChoosingTopicsResult)
+        # print(firstResult)
         ChoosingTopicsResult = ','.join(ChoosingTopicsResult)
         firstResult = ','.join(firstResult)
+        s = 0
         await edit_profile('ChoosingTopicsResult', ChoosingTopicsResult, call.message.chat.id)
         await edit_profile('page', page, call.message.chat.id)
+        await edit_profile('s', s, call.message.chat.id)
         await edit_profile('firstResult', firstResult, call.message.chat.id)
         await edit_profile('endSlinding', endSlinding, call.message.chat.id)
 
-    elif 'type4' in req[0]:  # Выбор возрастной группы
+    elif req[0] == 'type40.0':
+        # SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(req[0][5:]) * 2)],
+        #                                           endSlinding)  # Вызываем функцию
+        # print(SecondResult, endSecond)
+        if s == 1:  # Определяем направление движения
+            page = page + 2
+        nextPage = req[0]  # Запоминаем нажатую кнопку
+        slindingResult = SlidingLevel(tree, firstResult, firstResult[int(float(req[0][5:])) * 2],
+                                      endSlinding)  # Вызываем функцию
+        count = len(slindingResult)
+        s = 0
+        if page < count:  # Если движемся вперед
+            markup = InlineKeyboardMarkup()  # Определяем кнопку
+            markup.add(InlineKeyboardButton(text=emoji.emojize(f':left_arrow: Назад'), callback_data=f'back-page-TRP-preparation'),
+                       InlineKeyboardButton(text=f'{int(page / 2) + 1}/{int(count / 2)}', callback_data=f' '),
+                       # Создаем кнопку назад
+                       InlineKeyboardButton(text=emoji.emojize(f'Вперёд :right_arrow:'),
+                                            callback_data=req[0]))  # Создаем кнопку вперед
+            markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[6]}"',
+                                            callback_data='3'))  # Создаем кнопку возврата к теме
+            markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                            callback_data='start'))  # Создаем кнопку возврата на главную страницу
+            await botMes.edit_message_text(f'Проосмотр видео: <a href="{tree["Name"][int(slindingResult[page+1])+1]}">{tree["Name"][int(slindingResult[page+1])]}</a>',
+                                           parse_mode=types.ParseMode.HTML, reply_markup=markup,
+                                           chat_id=call.message.chat.id,
+                                           message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+            # if s==0:
+            page = page + 2
+        # Сохраняем переменные в БД
+        slindingResult = ','.join(slindingResult)
+        await edit_profile('nextPage', nextPage, call.message.chat.id)
+        await edit_profile('page', page, call.message.chat.id)
+        await edit_profile('s', s, call.message.chat.id)
+        await edit_profile('slindingResult', slindingResult, call.message.chat.id)
+        await edit_profile('count', count, call.message.chat.id)
+
+    elif req[0] == 'back-page-TRP-preparation':  # Если движемся назад
+        if s == 0:  # Определяем направление движения
+            page = page - 2
+        s = 1
+        if page > 1:  # Если движемся назад
+            page = page - 2
+            markup = InlineKeyboardMarkup()  # Определяем кнопку
+            markup.add(InlineKeyboardButton(text=emoji.emojize(f':left_arrow: Назад'), callback_data=f'back-page-TRP-preparation'),
+                    InlineKeyboardButton(text=f'{int(page / 2) + 1}/{int(count / 2)}', callback_data=f' '),
+                    # Создаем кнопку назад
+                    InlineKeyboardButton(text=emoji.emojize(f'Вперёд :right_arrow:'),
+                                            callback_data=nextPage))  # Создаем кнопку вперед
+            markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[6]}"',
+                                            callback_data='3'))  # Создаем кнопку возврата к теме
+            markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                            callback_data='start'))  # Создаем кнопку возврата на главную страницу
+            await botMes.edit_message_text(f'Проосмотр видео: <a href="{tree["Name"][int(slindingResult[page+1])+1]}">{tree["Name"][int(slindingResult[page+1])]}</a>', parse_mode=types.ParseMode.HTML,
+                                            reply_markup=markup, chat_id=call.message.chat.id,
+                                    message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+        # Сохраняем переменные в БД
+        await edit_profile('page', page, call.message.chat.id)
+        await edit_profile('s', s, call.message.chat.id)
+
+
+
+    elif 'type4' in req[0] and 'type40.0' != req[0]:  # Выбор возрастной группы
         if page == 0:
             SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(req[0][5:]) * 2)],
                                                       endSlinding)  # Вызываем функцию
