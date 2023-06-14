@@ -21,14 +21,14 @@ del (tree['Unnamed: 0'])
 # Подключаемся к БД
 async def on_startup(_):
     await db_start()
-    df = await all_table_from_db(table_name_db='base')
-    buttons = [['Вернуться к выбору раздела', 'Помощь']]
-    markupRK = ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=False)
+    # df = await all_table_from_db(table_name_db='base')
+    # buttons = [['Вернуться к выбору раздела', 'Помощь']]
+    # markupRK = ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=False)
 
-    for i in range(0, len(df)):
-        if df['replay_button'][i] is None:
-            await botMes.send_message(text='У нас обновление! Теперь в клавиатуре есть волшебные кнопочки!😊', chat_id=df['user_id'][i], reply_markup=markupRK)
-            await edit_profile(name='replay_button', value=1, user_id=df['user_id'][i])
+    # for i in range(0, len(df)):
+    #     if df['replay_button'][i] is None:
+    #         await botMes.send_message(text='У нас обновление! Теперь в клавиатуре есть волшебные кнопочки!😊', chat_id=df['user_id'][i], reply_markup=markupRK)
+    #         await edit_profile(name='replay_button', value=1, user_id=df['user_id'][i])
 
 
 # Создаем глобальные переменные
