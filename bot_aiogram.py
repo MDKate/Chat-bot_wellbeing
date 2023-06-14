@@ -896,12 +896,12 @@ async def start(message: types.message):
     buttons = [['Вернуться к выбору раздела', 'Помощь']]
     markupRK = ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=False)
 
-    df = await all_table_from_db(table_name_db='base')
-    # print((df[df['user_id'] == str(message.chat.id)]['replay_button']).values[0])
-    if (df[df['user_id'] == str(message.chat.id)]['replay_button']).values[0] != 1:
-            await botMes.send_message(text='У нас обновление! Теперь в клавиатуре есть волшебные кнопочки!😊',
-                                      chat_id=message.chat.id, reply_markup=markupRK)
-            await edit_profile(name='replay_button', value=1, user_id=message.chat.id)
+    # df = await all_table_from_db(table_name_db='base')
+    # # print((df[df['user_id'] == str(message.chat.id)]['replay_button']).values[0])
+    # if (df[df['user_id'] == str(message.chat.id)]['replay_button']).values[0] != 1:
+    #         await botMes.send_message(text='У нас обновление! Теперь в клавиатуре есть волшебные кнопочки!😊',
+    #                                   chat_id=message.chat.id, reply_markup=markupRK)
+    #         await edit_profile(name='replay_button', value=1, user_id=message.chat.id)
 
 
 
