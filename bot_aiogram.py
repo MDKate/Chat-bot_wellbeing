@@ -155,9 +155,10 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
             end = int(firstResult[start1 + 3]) - 1  # Определяем последнюю строку отсчета для выбранной ветки
         SecondName = np.array(
             [np.array(tree['Name'][start:start + 1])[0], start])  # Записываем первое имя ветки в этой ветке
-        for i in range(int(start) + 1, int(end) + 1):
-            if int(tree['ThirdLevel'][i - 1:i]) != int(
-                    tree['ThirdLevel'][i:i + 1]):  # Есди это другая ветка внутри ветки
+
+        for i in range(int(start) +1, int(end) ):
+            if int(tree['ThirdLevel'][i -1]) != int(
+                    tree['ThirdLevel'][i]):  # Есди это другая ветка внутри ветки
                 SecondName = np.append(SecondName, tree['Name'][i:i + 1])  # Дописываем имя новой ветки
                 SecondName = np.append(SecondName, str(i))  # Записываем ссылку на координаты
         endSecond = end
@@ -273,7 +274,6 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
             reply_markup=markup, message_id=call.message.message_id, chat_id=call.message.chat.id)  # Выводим сопутствующее сообщение
         await botMes.send_message(text=emoji.emojize(f"Вот расписание для города {sectCity}:woman_swimming:"),
             reply_markup=markup,  chat_id=call.message.chat.id)
-
 
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     # --------------------------------------------------------------Ветка - СГУ на спорте----------------------------------------------------------------------------------------
@@ -617,8 +617,6 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
         await edit_profile('page', page, call.message.chat.id)
         await edit_profile('s', s, call.message.chat.id)
 
-
-
     elif 'type4' in req[0] and 'type40.0' != req[0]:  # Выбор возрастной группы
         if page == 0:
             SecondResult, endSecond = SecondLevel(tree, firstResult, firstResult[int(float(req[0][5:]) * 2)],
@@ -878,7 +876,49 @@ async def callback_query(callback: types.CallbackQuery, tree=tree) :
     #         markup.add(InlineKeyboardButton(text=emoji.emojize('Начать :detective:'), callback_data='start'))
     #         bot.edit_message_text(emoji.emojize(f'Я немного подучился :desktop_computer: и готов помогать вам дальше! :man_running: Давайте снова начнем общаться! :e-mail:'),
     #                               reply_markup=markup, chat_id=call.message.chat.id, message_id=call.message.message_id)  # Выводим сопутствующее сообщение
+    # ------------------------------------------------------------------------------------------------------------------------------------------------------
+    # --------------------------------------------------------------Ветка Бросаем курить----------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------------------------------------------
+    elif req[0] == '7':  # Если метка 7
+        ChoosingTopicsResult = ChoosingTopics(tree)  # Вызываем функцию
+        firstResult, endSlinding = FirstLevel(tree, ChoosingTopicsResult[int(req[0]) * 2],
+                                              ChoosingTopicsResult)  # Вызываем функцию
+        markup = InlineKeyboardMarkup()  # Определяем кнопку
+        for i in range(0, len(firstResult), 2):  # Бежим по списку, вовзвращенному функцией
+            markup.add(InlineKeyboardButton(text=firstResult[i],
+                                            callback_data='smoke' + str(i / 2)))  # Создаем соответствующую кнопку
+        markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                        callback_data='start'))  # Создаем кнопку возврата на главную страницу
+        await botMes.edit_message_text(emoji.emojize(f"Как бросить курить?"),
+                                       reply_markup=markup,
+                                       chat_id=call.message.chat.id,
+                                       message_id=call.message.message_id)  # Выводим сопутствующее сообщение
 
+        # Сохраняем переменные в БД
+        ChoosingTopicsResult = ','.join(ChoosingTopicsResult)
+        firstResult = ','.join(firstResult)
+        await edit_profile('ChoosingTopicsResult', ChoosingTopicsResult, call.message.chat.id)
+        await edit_profile('firstResult', firstResult, call.message.chat.id)
+        await edit_profile('endSlinding', endSlinding, call.message.chat.id)
+
+    elif 'smoke' in req[0]:
+        SecondResult, endSecond = SecondLevel(tree, firstResult,
+                                          firstResult[int(float(req[0][5:]) * 2)],
+                                          endSlinding)  # Вызываем функцию от предыдущей кнопки
+        markup = InlineKeyboardMarkup()  # Определяем кнопку
+        for i in range(0, len(SecondResult), 2):  # Бежим по списку, вовзвращенному функцией
+            SRE = SecondResult[i].split('@@@')
+            # print(SRE)
+            markup.add(InlineKeyboardButton(text=SRE[0],
+                                    url=SRE[1]))  # Создаем соответствующую кнопку
+        markup.add(InlineKeyboardButton(text=f'Вернуться к "{ChoosingTopicsResult[14]}"',
+                                callback_data='7'))  # Создаем кнопку возврата к теме
+        markup.add(InlineKeyboardButton(text='Вернуться на главную',
+                                callback_data='start'))  # Создаем кнопку возврата на главную страницу
+        await botMes.edit_message_text(f"Ссылка (-и) \n Ваш выбор: \n {firstResult[int(float(req[0][5:]) * 2)]}",
+                               reply_markup=markup,
+                               chat_id=call.message.chat.id,
+                               message_id=call.message.message_id, parse_mode=types.ParseMode.HTML)  # Выводим сопутствующее сообщение
 
 
 # Обработчик входящих сообщений
